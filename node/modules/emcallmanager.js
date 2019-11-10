@@ -168,7 +168,8 @@ function EMCallManager(callManager) {
       
           function error(error) {
             console.log(`访问用户媒体设备失败${error.name}, ${error.message}`);
-            _manager.asyncEndCall(callId,4);
+            // _manager.asyncEndCall(callId,4);
+            self._eventEmitter.emit('getUserMediaFail',error);
             //_manager.updateCall(callId,0);
           }
       
@@ -356,7 +357,8 @@ EMCallManager.prototype.asyncAnswerCall = function(callId)
   
       function fail(e) {
         console.log(`访问用户媒体设备失败${e.name}, ${e.message}`);
-        _manager.asyncEndCall(callId,4);
+        // _manager.asyncEndCall(callId,4);
+        _eventEmitter.emit('getUserMediaFail',e);
       }
   
       if (navigator.mediaDevices.getUserMedia) {
@@ -446,6 +448,14 @@ EMCallManager.prototype.setSendPushMessage = function(callback){
  */
 EMCallManager.prototype.getRemoteStream = function(callback){
   this._eventEmitter.on('getRemoteStream',callback);
+}
+
+/**
+ * 设置收到本地媒体流后的回调
+ * @param {EMCallManager~getLocalStream}
+ */
+EMCallManager.prototype.getUserMediaFail = function(callback){
+  this._eventEmitter.on('getUserMediaFail',callback);
 }
 
 /**
