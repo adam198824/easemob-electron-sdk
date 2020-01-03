@@ -165,17 +165,26 @@ function EMCallManager(callManager) {
              localStream = stream;
              self._eventEmitter.emit("getLocalStream",localStream,type);
           }
-      
+
           function error(error) {
             console.log(`访问用户媒体设备失败${error.name}, ${error.message}`);
             // _manager.asyncEndCall(callId,4);
             self._eventEmitter.emit('getUserMediaFail',error);
-            //_manager.updateCall(callId,0);
           }
-      
+
           if (navigator.mediaDevices.getUserMedia) {
+
+            navigator.mediaDevices.enumerateDevices().then(result=>{
+              if(!result.some(item=>item.kind=='videoinput') && type !== 0){
+                getUserMedia({audio:true}, success, error);
+                _eventEmitter.emit('getUserMediaFail',e);
+                return;
+              }
+              getUserMedia(type == 0?{audio:true}:{ video: { width: videowidth>0?videowidth:640, height: videoheight>0?videoheight:480 },audio:true }, success, error);
+            },error=>{
+
+            })
             //调用用户媒体设备, 访问摄像头
-            getUserMedia(type == 0?{audio:true}:{ video: { width: videowidth>0?videowidth:640, height: videoheight>0?videoheight:480 },audio:true }, success, error);
           } else {
             alert('不支持访问用户媒体');
             _manager.asyncEndCall(callId,4);
@@ -203,7 +212,7 @@ function EMCallManager(callManager) {
                       var videoSectionIndex = obj.sdp.indexOf("m=video");
                       var audioSectionIndex = obj.sdp.indexOf("m=audio");
                       var end = audioSectionIndex > videoSectionIndex ? audioSectionIndex : obj.sdp.length;
-          
+
                       obj.sdp = obj.sdp.replace(regx, function (match, offset, string) {
                           if(offset >= videoSectionIndex && offset < end){
                               return use;
@@ -212,14 +221,14 @@ function EMCallManager(callManager) {
                           }
                       });
                   };
-          
+
                   videoSectionReplace(/a=sendrecv|a=sendonly/g, "a=inactive");
                 }
               }
               webrtc && webrtc.setRemoteDescription(obj);
         }
-        
-      
+
+
     });
     rtcProxy.createRtcAnswer((callId) => {
         console.log("createRtcAnswer");
@@ -321,7 +330,7 @@ EMCallManager.prototype.asyncMakeCall = function(remoteName,type,ext)
  * @property {String} description 错误描述，code不为0时使用
  * @property {EMCallSession} data 音视频会话控制
  */
- 
+
 /**
  * 接受视频呼叫
  * @param {String} callId 呼叫方名称
@@ -354,16 +363,25 @@ EMCallManager.prototype.asyncAnswerCall = function(callId)
         });
         remoteCandidate = [];
       }
-  
+
       function fail(e) {
         console.log(`访问用户媒体设备失败${e.name}, ${e.message}`);
         // _manager.asyncEndCall(callId,4);
         _eventEmitter.emit('getUserMediaFail',e);
       }
-  
+
       if (navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.enumerateDevices().then(result=>{
+          if(!result.some(item=>item.kind=='videoinput') && answertype !== 0){
+            getUserMedia({audio:true}, success, fail);
+            _eventEmitter.emit('getUserMediaFail',e);
+            return;
+          }
+          getUserMedia(answertype == 0?{audio:true}:{ video: {width: videowidth>0?videowidth:640, height: videoheight>0?videoheight:480},audio:true }, success, fail);
+        },error=>{
+
+        })
         //调用用户媒体设备, 访问摄像头
-        getUserMedia(answertype == 0?{audio:true}:{ video: {width: videowidth>0?videowidth:640, height: videoheight>0?videoheight:480},audio:true }, success, fail);
       } else {
         alert('不支持访问用户媒体');
         _manager.asyncEndCall(callId,4);
@@ -381,7 +399,7 @@ EMCallManager.prototype.sendAnswer = function(callId){
   let _manager = this._manager;
     webrtc && webrtc.createAnswer((sdp) => {
       rtcListerner.onReceiveSetup("");
-      let error = new EMError();  
+      let error = new EMError();
       _manager.asyncAnswerCall(callId,error._error);
       rtcListerner.onReceiveLocalSdp(JSON.stringify(sdp));
     },() => {
